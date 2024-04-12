@@ -49,7 +49,7 @@ const createUser = async(req:Request, res:Response, next:NextFunction)=>{
  
 try {
   const token = sign({sub:newuser._id}, config.jwtsecret as string, {expiresIn:'7d'})
-  res.json({accessToken:token})
+  res.status(201).json({accessToken:token})
 } catch (error) {
   return next(createHttpError(500, 'Error while signing the jwt token'))
 }
@@ -60,4 +60,38 @@ try {
 }
 
 
-export {createUser};
+const loginUser = async(req:Request, res:Response, next:NextFunction) =>{
+  const{email, password} = req.body
+
+  if(!email || !password){
+    return next(createHttpError(400, 'All field are required'))
+  }
+  let user: userType | null = null; // Initialize user as null
+    try {
+       user = await User.findOne({email})as userType
+       if(!user){
+        return next(createHttpError(404, 'user not found'))
+       }
+       const ismatch = await bcrypt.compare(password, user.password)
+       if(!ismatch){
+        return next(createHttpError(400, 'username or password incorrect'))
+       }
+
+      
+    } catch (error) {
+      return next(createHttpError(500, 'error while finding email'))
+    }
+
+    try {
+      const token = sign({sub:user?._id}, config.jwtsecret as string, {expiresIn:'7d'})
+      res.status(201).json({accessToken:token})
+      res.status(202).json({})
+    } catch (error) {
+     return  next(createHttpError(500, 'error while signing in jwt token'))
+    }
+
+}
+
+
+
+export {createUser, loginUser}; 
